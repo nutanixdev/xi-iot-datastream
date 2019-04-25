@@ -3,17 +3,22 @@
 .. toctree::
   :maxdepth: 2
   :caption:     Contents
-  :name: _req-labs
   :hidden:
 
-  .. example/index
-  contents/lab
+  index
+
 .. _welcome:
 
-**Welcome**
-===========
-Welcome to the Xi IoT - Data Pipelines - Getting Started Guide, v0.2.
+------
+Xi IoT - Data Pipelines - Getting Started Guide
+------
 
+Xi IoT Overview
+++++++++
+
+The Nutanix Xi IoT platform delivers local compute and AI for IoT edge devices, converging the edge and cloud into one seamless data processing platform.
+The Xi IoT platform eliminates complexity, accelerates deployments, and elevates developers to focus on the business logic powering IoT applications and services.
+Now developers can use a low-code development platform to create application software via APIs instead of arduous programming methods.
 
 Introducing Data Pipelines
 ###############################
@@ -132,7 +137,7 @@ Please refer to `mqtt package <https://www.npmjs.com/package/mqtt>`__ and exampl
 Python 2
 ~~~~~~~~~~~~
 
-   Prerequisites
+Prerequisites
 
 -  A Nutanix edge with an IP address onboarded to Xi IoT
 
@@ -142,155 +147,115 @@ Python 2
 
 -  pip 10.0.1 (python 2.7)
 
--  paho-mqtt. Install it for python 2.7.10 using the following command: sudo pip2.7 install paho-mqtt
+-  paho-mqtt. Install it for python 2.7.10 using the following command: 
+
+.. code-block:: bash
+
+   sudo pip2.7 install paho-mqtt
 
 ..
 
-   Sample
+Sample
 
-   Below is a simple example that shows how to connect to an mqtt  broker, publish a single message to a specific topic and receive the published message back.
+Below is a simple example that shows how to connect to an mqtt  broker, publish a single message to a specific topic and receive the published message back.
 
-   .. code-block:: python2
+.. code-block:: bash
+
    # Example code to connect, publish and subscribe from a mqtt client
-
    # For the example to work:
-
    # 1. create a dir named 'certs' under $PWD and copy the certs
-
-   # generated using Xi IoT SaaS Portal.
-
+   #    generated using Xi IoT SaaS Portal.
    # 2. Modify the 'broker_address' variable to point to the edge
-
-   # ip address that is being used for the tests.
+   #    ip address that is being used for the tests.
 
    import paho.mqtt.client as mqttClient
-
    import time
-
    import ssl
 
    def on_connect(client, userdata, flags, rc):
-
-        if rc == 0:
-
-   print("Connected to broker")
-
-   global Connected
-
-   Connected = True #Signal connection
-
-   else:
-
-   print("Connection failed")
+      if rc == 0:
+         print("Connected to broker")
+         global Connected
+         Connected = True                #Signal connection 
+      else:
+         print("Connection failed")
 
    def on_publish(client, userdata, result):
-
-   print "Published!"
+      print "Published!"
 
    def on_message(client, userdata, message):
-
-   print "New message received!"
-
-   print "Topic: ", message.topic
-
-   print "Message: ", str(message.payload.decode("utf-8"))
+      print "New message received!"
+      print "Topic: ", message.topic
+      print "Message: ", str(message.payload.decode("utf-8"))
 
    def main():
+      global Connected
+      Connected = False
+      # IP address of the edge. Modify this.
+      broker_address= "<edge_ip>"
+      port = 1883
+      # NOTE: For data pipelines to receive MQTT messages, topic should
+      #       be the same as that specified when creating the MQTT datasource.
+      topic = "test"
 
-   global Connected
+      client = mqttClient.Client()
+      # Set callbacks for connection event, publish event and message receive event
+      client.on_connect = on_connect
+      client.on_publish = on_publish
+      client.on_message = on_message
+      client.tls_set(ca_certs="certs/ca.crt", certfile="certs/client.crt", keyfile="certs/client.key", cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
+      # Set this to ignore hostname only. TLS is still valid with this setting.
+      client.tls_insecure_set(True)
+      client.connect(broker_address, port=port)
+      client.subscribe(topic)
+      client.loop_start()
 
-   Connected = False
+      # Wait for connection
+      while Connected != True:    
+         print "Connecting..."
+         time.sleep(1)
 
-   # IP address of the edge. Modify this.
 
-   broker_address= "<edge_ip>"
+      try:
+         client.publish(topic, "Hello, World!")
+         time.sleep(5)
+      except KeyboardInterrupt:
+         client.disconnect()
+         client.loop_stop()
 
-   port = 1883
+   if __name__ == "__main__":
+      main()
 
-   # NOTE: For data pipelines to receive MQTT messages, topic should
 
-   # be the same as that specified when creating the MQTT datasource.
 
-   topic = "test"
-
-   client = mqttClient.Client()
-
-        # Set callbacks for connection event, publish event and message receive event
-
-   client.on_connect = on_connect
-
-   client.on_publish = on_publish
-
-   client.on_message = on_message
-        client.tls_set(ca_certs="certs/ca.crt", certfile="certs/client.crt", keyfile="certs/client.key", cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
-
-        # Set this to ignore hostname only. TLS is still valid with this setting.
-
-   client.tls_insecure_set(True)
-
-   client.connect(broker_address, port=port)
-
-   client.subscribe(topic)
-
-   client.loop_start()
-
-   # Wait for connection
-
-   while Connected != True:
-
-   print "Connecting..."
-
-   time.sleep(1)
-
-   try:
-
-   client.publish(topic, "Hello, World!")
-
-   time.sleep(5)
-
-   except KeyboardInterrupt:
-
-   client.disconnect()
-
-   client.loop_stop()
-
-    if __name__ == "__main__":
-
-   main()
-
-   Running the example
+Running the example
 
 1. Download the certificates from Xi IoT and store them locally under certs. directory. Name the files as follows:
 
--  ca.crt - Root CA certificate
+   -  ca.crt - Root CA certificate
 
--  client.crt - client certificate
+   -  client.crt - client certificate
 
--  client.key - client private key
+   -  client.key - client private key
 
 2. Modify broker_address to point to the Xi IoT edge IP address.
 
-..
+3. Run the example as follows:
 
-   Run the example as follows:
+   .. code-block:: bash
 
-   .. code-block:: python2
-   $ python2.7 mqtt-example.py
+      $ python2.7 mqtt-example.py
 
    Expected output:
 
    .. code-block:: bash
-   Connecting...
-
-   Connected to broker
-
-   Published!
-
-   New message received!
-
-   Topic: test
-
-   Message: Hello, World!
+   
+      Connecting...
+      Connected to broker
+      Published!
+      New message received!
+      Topic: test
+      Message: Hello, World!
 
 Runtime Environments
 #######################
@@ -309,123 +274,98 @@ Xi IoT includes standard runtime environments including but not limited to the f
 
    -  Following is a basic Node.js function template:
 
-      .. code-block:: NodeJS
+      .. code-block:: bash
 
-   function main(ctx, msg) {
+         function main(ctx, msg) {
+            return new Promise(function(resolve, reject) {
+               // log list of transformation parameters
+               console.log("Config", ctx.config)
+               // log length of message payload
+               console.log(msg.length)
+               // forward message to next stage in pipeline
+               ctx.send(msg)
+               // complete promise
+               resolve()
+            })
+         }
 
-   return new Promise(function(resolve, reject) {
+         exports.main = main
 
-   // log list of transformation parameters
+      All functions must export main which returns a promise.
 
-   console.log("Config", ctx.config)
+      Expected output:
 
-   // log length of message payload
+      .. code-block:: bash
 
-   console.log(msg.length)
-
-   // forward message to next stage in pipeline
-
-   ctx.send(msg)
-
-   // complete promise
-
-   resolve()
-
-   })
-
-   }
-
-   exports.main = main
-
-   All functions must export main which returns a promise.
-
-   Expected console output:
-
-   .. code-block:: bash
-   Config { IntParam: '42', StringParam: 'hello' }
-
-   2764855
+            Config { IntParam: '42', StringParam: 'hello' }
+            2764855
 
    .. note::
-   Packages available in NodeJS Runtime
+      
+      Packages available in NodeJS Runtime
 
--  alpine-baselayout
+      -  alpine-baselayout
 
--  alpine-keys
+      -  alpine-keys
 
--  apk-tools
+      -  apk-tools
 
--  busybox
+      -  busybox
 
--  libc-utils
+      -  libc-utils
 
--  libgcc
+      -  libgcc
 
--  libressl2.5-libcrypto
+      -  libressl2.5-libcrypto
 
--  libressl2.5-libssl
+      -  libressl2.5-libssl
 
--  libressl2.5-libtls
+      -  libressl2.5-libtls
 
--  libstdc++
+      -  libstdc++
 
--  musl
+      -  musl
 
--  musl-utils
+      -  musl-utils
 
--  scanelf
+      -  scanelf
 
--  ssl_client
+      -  ssl_client
 
--  zlib
+      -  zlib
 
 -  **Python 2**
 
    -  Functions can be executed in data pipelines to transform and filter data. Transformations are functions used to process single messages and optionally forward them to next stage in data pipeline. The next stage could be another transformation or destination of the data pipeline on edge or in the cloud.
       Transformation can accept parameters. In Python parameters are passed as dictionary to transformation. The following script demonstrates some basic concepts:
 
-..
+      .. code-block:: bash
 
-   import logging
+         import logging
 
-   # Python function are invoked with context and message payload.
+         # Python function are invoked with context and message payload.
+         # The context can be used to retrieve metadata about the message and allows
+         # function to send mesagges to next stage in stream. In this sample we just
+         # log message payload and forward it as is to next stage.
+         def main(ctx, msg):
+               logging.info("Parameters: %s", ctx.get_config())
+               logging.info("Process %d bytes from %s at %s", msg, ctx.get_topic(), ctx.get_timestamp())
+               # Forward to next stage in pipeline.
+               ctx.send(msg)
 
-   # The context can be used to retrieve metadata about the message and
-   allows
+      Pass two parameters to the function:
 
-   # function to send mesagges to next stage in stream. In this sample
-   we just
+      -  MyStringParam like the name suggests is a parameter of type string.
 
-   # log message payload and forward it as is to next stage.
+      -  MyIntParam is a number.
 
-   def main(ctx, msg):
+      The function would produce the following console output when
+      processing images from a camera:
 
-   logging.info("Parameters: %s", ctx.get_config())
+      .. code-block:: bash
 
-   logging.info("Process %d bytes from %s at %s", msg, ctx.get_topic(),
-   ctx.get_timestamp())
-
-   # Forward to next stage in pipeline.
-
-   ctx.send(msg)
-
-   Pass two parameters to the function:
-
--  MyStringParam like the name suggests is a parameter of type string.
-
--  MyIntParam is a number.
-
-..
-
-   The function would produce the following console output when
-   processing images from a camera:
-
-   [2019-03-12 04:57:26,820 root INFO] Parameters: {u'MyIntParam':
-   u'42', u'MyStringParam': u'hello'}
-
-   [2019-03-12 04:57:26,820 root INFO] Process 2764855 bytes from
-   rtsp://184.72.239.149:554/vod/mp4:BigBuckBunny_175k.mov at
-   1552366646754939017
+         [2019-03-12 04:57:26,820 root INFO] Parameters: {u'MyIntParam':u'42', u'MyStringParam': u'hello'}
+         [2019-03-12 04:57:26,820 root INFO] Process 2764855 bytes from rtsp://184.72.239.149:554/vod/mp4:BigBuckBunny_175k.mov at 1552366646754939017
 
    **Methods provided by ctx**
 
